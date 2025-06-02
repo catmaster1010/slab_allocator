@@ -4,7 +4,7 @@ CFLAGS=-O3
 LFLAGS+= -Wl,--defsym,__stack_limit=3000000000
 override SOURCES := $(shell find . -type f -name '*.c')
 # define list of objects
-OBJS=$(OBJSC:.cpp=.o)
+OBJS=$(OBJSC:.c=.o)
 
 # the target is obtained linking all .o files
 all: $(SOURCES) $(TARGET)
