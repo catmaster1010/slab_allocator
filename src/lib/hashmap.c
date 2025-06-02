@@ -1,28 +1,19 @@
 #include "hashmap.h"
 #include "../slab.h"
 #include "string.h"
+#include <stdint.h>
 
-// http://www.cse.yorku.ca/~oz/hash.html
-static inline size_t hash(char *key, size_t size) {
-  size_t hash = 5381;
-  for (size_t i = 0; i < size; i++) {
-    uint8_t c = key[i];
-    hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
-  }
-  return hash;
-}
-
-#define INDEX(KEY, ENTRY_COUNT) {hash(KEY, strlen(KEY)) % ENTRY_COUNT}
+#define INDEX(KEY, ENTRY_COUNT) {(uintptr_t)KEY % ENTRY_COUNT}
 
 static inline kmem_hashmap_entry_t *
-kmem_hashmap_entry_get(kmem_hashmap_t *kmem_hashmap, char *key) {
+kmem_hashmap_entry_get(kmem_hashmap_t *kmem_hashmap, void *key) {
   size_t index = INDEX(key, kmem_hashmap->entry_count);
   kmem_hashmap_entry_t *entry = &kmem_hashmap->entries[index];
-  size_t key_length = strlen(key);
   while (entry) {
-    if (key_length == entry->key_length) {
-      if (!memcmp(entry->key, key, key_length))
-        break;
+    if (entry->key == NULL)
+      return entry;
+    if (entry->key == key) {
+      break;
     }
     entry = entry->next;
   }
@@ -30,7 +21,7 @@ kmem_hashmap_entry_get(kmem_hashmap_t *kmem_hashmap, char *key) {
 }
 
 bool kmem_hashmap_create(kmem_hashmap_t *kmem_hashmap, size_t entry_count) {
-  void *data = kmem_malloc(entry_count * sizeof(kmem_hashmap_entry_t));
+  void *data = kmem_calloc(entry_count * sizeof(kmem_hashmap_entry_t));
   if (!data)
     return false;
   kmem_hashmap->entries = (kmem_hashmap_entry_t *)data;
@@ -39,10 +30,11 @@ bool kmem_hashmap_create(kmem_hashmap_t *kmem_hashmap, size_t entry_count) {
   return true;
 }
 
-bool kmem_hashmap_set(kmem_hashmap_t *kmem_hashmap, char *key, void *val) {
+bool kmem_hashmap_set(kmem_hashmap_t *kmem_hashmap, void *key, void *val) {
   kmem_hashmap_entry_t *entry =
       (kmem_hashmap_entry_t *)kmem_hashmap_entry_get(kmem_hashmap, key);
   if (entry) {
+    entry->key = key;
     entry->val = val;
     return true;
   }
@@ -61,7 +53,6 @@ bool kmem_hashmap_set(kmem_hashmap_t *kmem_hashmap, char *key, void *val) {
     return false;
 
   new_entry->key = key;
-  new_entry->key_length = strlen(key);
   new_entry->val = val;
   new_entry->next = NULL;
   entry->next = new_entry;
@@ -69,7 +60,7 @@ bool kmem_hashmap_set(kmem_hashmap_t *kmem_hashmap, char *key, void *val) {
   return true;
 }
 
-void *kmem_hashmap_get(kmem_hashmap_t *kmem_hashmap, char *key) {
+void *kmem_hashmap_get(kmem_hashmap_t *kmem_hashmap, void *key) {
   kmem_hashmap_entry_t *entry = kmem_hashmap_entry_get(kmem_hashmap, key);
   if (entry == NULL) {
     return 0;
@@ -77,16 +68,13 @@ void *kmem_hashmap_get(kmem_hashmap_t *kmem_hashmap, char *key) {
   return entry->val;
 }
 
-bool kmem_hashmap_remove(kmem_hashmap_t *kmem_hashmap, char *key) {
+bool kmem_hashmap_remove(kmem_hashmap_t *kmem_hashmap, void *key) {
   size_t index = INDEX(key, kmem_hashmap->entry_count);
   kmem_hashmap_entry_t *entry = &kmem_hashmap->entries[index];
   kmem_hashmap_entry_t *prev = NULL;
-  size_t key_length = strlen(key);
   while (entry) {
-    if (key_length == entry->key_length) {
-      if (memcmp(entry->key, key, key_length))
-        break;
-    }
+    if (memcmp(entry->key, key, KM_KEY_LENGTH))
+      break;
     prev = entry;
     entry = entry->next;
   }

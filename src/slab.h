@@ -24,6 +24,7 @@ typedef struct kmem_slab {
   kmem_bufctl_t *buf_back;
   unsigned int buf_count; /*number of bufers in this slab*/
   unsigned int ref_count; /* number of refrences to this slab*/
+  size_t size;
 } kmem_slab_t;
 
 typedef struct kmem_cache {
