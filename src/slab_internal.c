@@ -25,11 +25,48 @@ static inline void __add_slab2cache(kmem_cache_t *cp, kmem_slab_t *slab) {
   }
 }
 
+/* Move a slab to the end, these slabs will then be claimed when
+ * `kmem_cache_reap()` is called */
 static inline void __remove_slabfromcache(kmem_cache_t *cp, kmem_slab_t *slab) {
   // Already at the end
   if (cp->slabs == slab) {
     return;
   }
+  /* else, move it to the end */
+  slab->prev->next = slab->next;
+  slab->next->prev = slab->prev;
+
+  kmem_slab_t *prev = cp->slabs->prev;
+  kmem_slab_t *next = cp->slabs->next;
+  DLL_LIST_ADD(slab, prev, next);
+}
+
+static inline void __make_bufctl(kmem_cache_t *cp, kmem_slab_t *slab,
+                                 kmem_bufctl_t *last_bufctl,
+                                 kmem_bufctl_t *bufctl, void **page,
+                                 unsigned long i) {
+
+  printf("slab size: %ld, i %ld\n", slab->size, i);
+  bufctl = (kmem_bufctl_t *)kmem_calloc(
+      sizeof(kmem_bufctl_t)); // allocate a bufctl structure
+  assert(bufctl);
+
+  bufctl->slab = slab; // backpointer to the slab
+  bufctl->buf =
+      (void *)((uintptr_t)*page +
+               (uintptr_t)i * cp->object_size); // Calculate where the buffer is
+  bufctl->next = NULL;
+  last_bufctl->next = bufctl;
+  kmem_debug("%p to %p...", bufctl->buf, bufctl);
+
+  kmem_hashmap_set(cp->hashmap, bufctl->buf,
+                   bufctl); // bufctl->buf to bufctl hashmap
+  kmem_debug("result: %p\n", kmem_hashmap_get(cp->hashmap, bufctl->buf));
+
+  cp->constructor(bufctl); // Construct it
+  last_bufctl = bufctl;
+  kmem_debug("bufctl has been constructed! \n");
+  return;
 }
 
 // just support large caches for now... deafult small caches to large ones
@@ -67,7 +104,6 @@ void __kmem_cache_grow(kmem_cache_t *cp, int kmflag) {
   // Init the rest of the bufctls
   kmem_bufctl_t *bufctl;
   for (unsigned long i = 1; i < slab->size - 1; i++) {
-    printf("slab size: %ld, i %ld\n", slab->size, i);
     bufctl = (kmem_bufctl_t *)kmem_calloc(
         sizeof(kmem_bufctl_t)); // allocate a bufctl structure
     assert(bufctl);
@@ -89,6 +125,10 @@ void __kmem_cache_grow(kmem_cache_t *cp, int kmflag) {
     last_bufctl = bufctl;
     kmem_debug("bufctl has been constructed! \n");
   }
+  slab->buf_back =
+      last_bufctl; /* make sure to set last bufctl of the slab to `buf_back`*/
+
+  /* add the finished and constructed slab to the cache */
   __add_slab2cache(cp, slab);
   return;
 }

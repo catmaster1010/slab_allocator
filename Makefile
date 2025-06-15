@@ -7,7 +7,6 @@ override SOURCES := $(shell find . -type f -name '*.c')
 all:  $(TARGET)
 
 $(TARGET): $(SOURCES)
-	echo $(OBJS)
 	$(CC) $(CFLAGS)  -o $(TARGET) $(SOURCES) 
 
 clean:

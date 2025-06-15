@@ -1,16 +1,7 @@
 #include "slab.h"
-#include "common.h" // Include your header file here
+#include "common.h"
 #include "lib/hashmap.h"
 #include "slab_internal.h"
-
-kmem_cache_t _kmem_cache_t_cache;
-#define DLL_LIST_ADD(n, prev, next)                                            \
-  {                                                                            \
-    next->prev = n;                                                            \
-    n->next = next;                                                            \
-    n->prev = prev;                                                            \
-    prev->next = n;                                                            \
-  }
 
 kmem_cache_t *
 kmem_cache_create(const char *name, /* descriptive name for this cache */

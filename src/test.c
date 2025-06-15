@@ -19,7 +19,7 @@ int main() {
   kmem_printf("CONTENTS: %s, %lu", cp->name, cp->num_active);
 
   struct foo *new_foo = (struct foo *)kmem_cache_alloc(cp, KM_NOSLEEP);
-  // kmem_cache_free(cp, new_foo);
+  kmem_cache_free(cp, new_foo);
 
   kmem_hashmap_t *kmem_hashmap =
       (kmem_hashmap_t *)malloc(sizeof(kmem_hashmap_t));
