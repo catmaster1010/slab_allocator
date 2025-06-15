@@ -9,4 +9,4 @@ $(TARGET): $(SOURCES)
 	$(CC) $(CFLAGS)  -o $(TARGET) $(SOURCES) 
 
 clean:
-	rm -f *.o slab
+	rm -f slab
