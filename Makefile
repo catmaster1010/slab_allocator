@@ -1,18 +1,14 @@
-CC=g++ # define the compiler to use
+CC=gcc # define the compiler to use
 TARGET=slab # define the name of the executable
-CFLAGS=-O3
-LFLAGS+= -Wl,--defsym,__stack_limit=3000000000
+CFLAGS+=-g -Wno-builtin-declaration-mismatch
 override SOURCES := $(shell find . -type f -name '*.c')
-# define list of objects
-OBJS=$(OBJSC:.c=.o)
 
 # the target is obtained linking all .o files
-all: $(SOURCES) $(TARGET)
+all:  $(TARGET)
 
-$(TARGET): $(OBJS)
-	$(CC) $(LFLAGS)  -o $(TARGET) $(SOURCES) 
+$(TARGET): $(SOURCES)
+	echo $(OBJS)
+	$(CC) $(CFLAGS)  -o $(TARGET) $(SOURCES) 
 
-$(OBJS): %.cpp
-	$(CC) $(CFLAGS) -c $< -o $@
 clean:
 	rm -f *.o slab

@@ -1,15 +1,25 @@
 #include "lib/hashmap.h"
 #include "slab.h"
+
 struct foo {
   int a;
 };
+
+void foo_constructor(void *foo_ptr) {
+  struct foo *fp = (struct foo *)foo_ptr;
+  fp->a = 54321;
+  return;
+}
+
 int main() {
 
-  kmem_cache_t *cp =
-      kmem_cache_create("kmem_cache", sizeof(struct foo), 0, NULL, NULL);
+  kmem_cache_t *cp = kmem_cache_create("kmem_cache", sizeof(struct foo), 0,
+                                       foo_constructor, NULL);
   kmem_printf("CACHE RECIVED! %p", cp);
-  kmem_printf("CONTESTS: %s, %lu", cp->name, cp->num_active);
-  kmem_cache_alloc(cp, KM_NOSLEEP);
+  kmem_printf("CONTENTS: %s, %lu", cp->name, cp->num_active);
+
+  struct foo *new_foo = (struct foo *)kmem_cache_alloc(cp, KM_NOSLEEP);
+  // kmem_cache_free(cp, new_foo);
 
   kmem_hashmap_t *kmem_hashmap =
       (kmem_hashmap_t *)malloc(sizeof(kmem_hashmap_t));
