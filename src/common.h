@@ -10,7 +10,7 @@
 #define PAGE_SZ sysconf(_SC_PAGE_SIZE)
 #define kmem_malloc malloc
 #define kmem_free free
-#define kmem_posix_memalign posix_memalign
+#define kmem_aligned_alloc aligned_alloc
 #define kmem_assert assert
 #define kmem_calloc(x) calloc(x, x)
 #endif

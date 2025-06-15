@@ -14,7 +14,13 @@ kmem_cache_create(const char *name, /* descriptive name for this cache */
   cp->name = name;
   cp->object_size = size;
   kmem_debug("Object size: %ld\n", size);
-  cp->align = align;
+
+  if ((align & (align - 1)) == 0) { /* check if it is a power of two */
+    cp->align = align;
+  } else {
+    kmem_debug("alignment must be a power of two!\n");
+    kmem_assert(0);
+  }
   cp->constructor = constructor;
   cp->destructor = destructor;
 
@@ -39,7 +45,7 @@ void *kmem_cache_alloc(kmem_cache_t *cp, int kmflag) {
     slab = cp->slabs_partial;
 
     /* If it becomes a full slab, add it to the front*/
-    if (slab->ref_count == slab->buf_count) {
+    if (slab->ref_count + 1 == slab->buf_count) {
       kmem_slab_t *prev = cp->slabs->prev;
       kmem_slab_t *next = cp->slabs->next;
       DLL_LIST_ADD(slab, prev, next);
@@ -66,13 +72,13 @@ void *kmem_cache_alloc(kmem_cache_t *cp, int kmflag) {
     /* add the new slab to partial slabs, remember that there are no partial
      * slabs, thus, we can just set the cp->partial to the slab */
     cp->slabs_partial = slab;
-    printf("Prev %p next %p\n", prev, next);
     DLL_LIST_ADD(slab, prev, next);
   }
 
   buf = slab->buf_front;
   slab->buf_front = slab->buf_front->next;
   slab->ref_count++;
+  cp->num_allocations++;
   return buf->buf;
 }
 
@@ -80,6 +86,7 @@ void *kmem_cache_alloc(kmem_cache_t *cp, int kmflag) {
 void kmem_cache_free(kmem_cache_t *cp, void *buf) {
   kmem_bufctl_t *bufctl = (kmem_bufctl_t *)kmem_hashmap_get(cp->hashmap, buf);
   __kmem_cache_free_large(cp, bufctl);
+  cp->num_allocations--;
 
   return;
 }

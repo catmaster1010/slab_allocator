@@ -7,7 +7,7 @@
 
 static inline kmem_hashmap_entry_t *
 kmem_hashmap_entry_get(kmem_hashmap_t *kmem_hashmap, void *key) {
-  size_t index = INDEX(key, kmem_hashmap->entry_count);
+  size_t index = INDEX((size_t)key, (size_t)kmem_hashmap->entry_count);
   kmem_hashmap_entry_t *entry = &kmem_hashmap->entries[index];
   while (entry) {
     if (entry->key == NULL)
