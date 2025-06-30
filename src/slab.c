@@ -3,39 +3,46 @@
 #include "lib/hashmap.h"
 #include "slab_internal.h"
 
-kmem_cache_t *
-kmem_cache_create(const char *name, /* descriptive name for this cache */
-                  size_t size,      /* size of the objects it manages */
-                  size_t align,     /* minimum object alignment */
-                  void (*constructor)(void *obj),
-                  void (*destructor)(void *obj)) {
+kmem_cache_t *kmem_cache_create(const char *name, size_t size, size_t align,
+                                void (*constructor)(void *obj),
+                                void (*destructor)(void *obj)) {
+
   kmem_cache_t *cp = (kmem_cache_t *)kmem_calloc(
       sizeof(kmem_cache_t)); // TODO: bootstrap so we no longer rely on malloc
   cp->name = name;
   cp->object_size = size;
   kmem_debug("Object size: %ld\n", size);
 
-  if ((align & (align - 1)) == 0) { /* check if it is a power of two */
+  /* check if it is a power of two */
+  if ((align & (align - 1)) == 0) {
     cp->align = align;
   } else {
     kmem_debug("alignment must be a power of two!\n");
     kmem_assert(0);
   }
+
   cp->constructor = constructor;
   cp->destructor = destructor;
 
-  // will make sep. cache for hashmaps aswell
-  cp->hashmap = (kmem_hashmap_t *)kmem_calloc(
-      sizeof(kmem_hashmap_t)); // TODO: bootstrap so we no longer rely on malloc
-  kmem_hashmap_create(
-      cp->hashmap, KM_NUM_BUCKETS); // in kmem_cache_alloc when implemented...
+  // TODO: make sep. cache for hashmaps
+  cp->hashmap = (kmem_hashmap_t *)kmem_calloc(sizeof(kmem_hashmap_t));
+  kmem_hashmap_create(cp->hashmap, KM_NUM_BUCKETS);
+
   return cp;
 }
 
+void kmem_cache_destroy(kmem_cache_t *cp) {
+  kmem_hashmap_destroy(cp->hashmap);
+  kmem_free(cp->hashmap);
+  kmem_free(cp);
+}
+
 void *kmem_cache_alloc(kmem_cache_t *cp, int kmflag) {
+  /* If there are no slabs, that is, both free and partial, we grow the cache*/
   while (!cp->slabs_partial && !cp->slabs_free) {
     __kmem_cache_grow(cp, kmflag);
   }
+
   kmem_slab_t *prev;
   kmem_slab_t *next;
   kmem_bufctl_t *buf;
@@ -75,17 +82,23 @@ void *kmem_cache_alloc(kmem_cache_t *cp, int kmflag) {
     DLL_LIST_ADD(slab, prev, next);
   }
 
+  /* remove the buffer from the slab */
   buf = slab->buf_front;
   slab->buf_front = slab->buf_front->next;
+
+  /* increase counts */
   slab->ref_count++;
   cp->num_allocations++;
+
   return buf->buf;
 }
 
 // Only support freeing of large caches (For now)
 void kmem_cache_free(kmem_cache_t *cp, void *buf) {
+  /* get the respective `bufctl_t` structure from the hashmap */
   kmem_bufctl_t *bufctl = (kmem_bufctl_t *)kmem_hashmap_get(cp->hashmap, buf);
   __kmem_cache_free_large(cp, bufctl);
+
   cp->num_allocations--;
 
   return;

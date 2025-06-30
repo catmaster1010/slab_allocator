@@ -6,9 +6,13 @@
 // ASSUMPTIONS: slab is a newly constructed slab
 static inline void __add_slab2cache(kmem_cache_t *cp, kmem_slab_t *slab) {
   cp->num_active += slab->size;
+
+  /* if there are no free slabs, set cp->slabs_free to that slab */
   if (!cp->slabs_free) {
     cp->slabs_free = slab;
   }
+
+  /* if there are no slabs at all, add it */
   if (cp->slabs) {
     kmem_slab_t *tail = cp->slabs->prev;
     tail->next->prev = slab;
@@ -16,6 +20,7 @@ static inline void __add_slab2cache(kmem_cache_t *cp, kmem_slab_t *slab) {
     slab->prev = tail;
     slab->next = tail->next->prev;
   } else {
+    /* else, just add it to the end of the list (where free slabs reside) */
     cp->slabs = slab;
     slab->prev = slab;
     slab->next = slab;
@@ -26,9 +31,12 @@ static inline void __add_slab2cache(kmem_cache_t *cp, kmem_slab_t *slab) {
  * `kmem_cache_reap()` is called
  * ASSUMPTIONS: `ref_count` is 0*/
 static inline void __remove_slabfromcache(kmem_cache_t *cp, kmem_slab_t *slab) {
+
+  /* if there are no free slabs, set cp->slabs_free to that slab */
   if (!cp->slabs_free) {
     cp->slabs_free = slab;
   }
+
   /* if its the only `slabs_partial`` */
   if (cp->slabs_partial->next == cp->slabs_free ||
       cp->slabs_partial->next == cp->slabs ||

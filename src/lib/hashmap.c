@@ -90,3 +90,9 @@ bool kmem_hashmap_remove(kmem_hashmap_t *kmem_hashmap, void *key) {
   kmem_hashmap->items--;
   return true;
 }
+bool kmem_hashmap_destroy(kmem_hashmap_t *kmem_hashmap) {
+  kmem_assert(
+      kmem_hashmap->entry_count); // ensure that there are no more entries
+  kmem_free(kmem_hashmap->entries);
+  return true;
+}
