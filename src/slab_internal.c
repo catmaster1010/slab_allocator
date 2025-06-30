@@ -119,6 +119,7 @@ void __kmem_cache_grow(kmem_cache_t *cp, int kmflag) {
   __add_slab2cache(cp, slab);
   return;
 }
+void __kmem_cache_reap(kmem_cache_t *cp) {}
 
 // Assumptions: returned structure is in its constructed state
 void __kmem_cache_free_large(kmem_cache_t *cp, kmem_bufctl_t *bufctl) {

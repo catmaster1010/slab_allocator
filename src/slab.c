@@ -32,6 +32,9 @@ kmem_cache_t *kmem_cache_create(const char *name, size_t size, size_t align,
 }
 
 void kmem_cache_destroy(kmem_cache_t *cp) {
+  kmem_assert(cp->num_allocations ==
+              0); // ensure that there are no more references to the cache
+  __kmem_cache_reap(cp);
   kmem_hashmap_destroy(cp->hashmap);
   kmem_free(cp->hashmap);
   kmem_free(cp);
